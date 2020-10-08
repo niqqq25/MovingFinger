@@ -6,9 +6,9 @@ const BOARD = {
     WIDTH: 10,
 };
 
-const boardBoxes = [];
+let boardBoxes = [];
 let avatarPosition = 0;
-let avatarRotation = 0;
+let avatarDirection = Vector2.right;
 
 (function init() {
     initBoard();
@@ -26,24 +26,26 @@ $moveForwardButton.addEventListener("click", handleMoveForward);
 $turnRightButton.addEventListener("click", handleTurnRight);
 
 function handleMoveForward() {
-    const step = getStepFromRotation(avatarRotation);
-    const newPosition = avatarPosition + step;
-    if (shouldAvatarMove(step, newPosition)) {
+    const { x, y } = avatarDirection;
+    //-y - because y axis is upside down
+    const newPosition = avatarPosition - y * BOARD.WIDTH + x;
+
+    if (shouldAvatarMove(newPosition)) {
         moveAvatar(newPosition);
     } else {
         handleTurnRight();
     }
 }
 
-function shouldAvatarMove(step, newPosition) {
-    if (newPosition > BOARD.WIDTH * BOARD.HEIGHT || newPosition < 0) {
+function shouldAvatarMove(newPosition) {
+    if (newPosition >= BOARD.WIDTH * BOARD.HEIGHT || newPosition < 0) {
         return false;
     }
 
     const currentRow = Math.floor(avatarPosition / BOARD.WIDTH);
     const newRow = Math.floor(newPosition / BOARD.WIDTH);
 
-    if (Math.abs(step) === 1 && currentRow !== newRow) {
+    if (avatarDirection.x !== 0 && currentRow !== newRow) {
         return false;
     }
 
@@ -51,9 +53,14 @@ function shouldAvatarMove(step, newPosition) {
 }
 
 function handleTurnRight() {
-    let currentRotation = avatarRotation + 90;
-    avatarRotation = currentRotation === 360 ? 0 : currentRotation;
-    $avatar.style["transform"] = `rotate(${avatarRotation}deg)`;
+    const { x, y } = avatarDirection;
+    avatarDirection.x = y;
+    avatarDirection.y = -x;
+
+    const _currentRotation =
+        -Math.atan2(avatarDirection.y, avatarDirection.x) * (180 / Math.PI);
+
+    $avatar.style["transform"] = `rotate(${_currentRotation}deg)`;
 }
 
 function moveAvatar(newPosition) {
@@ -70,6 +77,7 @@ function initBoard() {
         boardBoxes.push($clonedBoard);
         $board.appendChild($clonedBoard);
     }
+
     $board.style["grid-template-columns"] = `repeat(${BOARD.WIDTH}, 1fr )`;
 }
 
@@ -77,22 +85,4 @@ function createBoardBox() {
     $boardBox = document.createElement("div");
     $boardBox.className = "board-box";
     return $boardBox;
-}
-
-//helpers
-function getStepFromRotation(rotation) {
-    switch (rotation) {
-        case 0: {
-            return 1;
-        }
-        case 90: {
-            return BOARD.WIDTH;
-        }
-        case 180: {
-            return -1;
-        }
-        case 270: {
-            return -BOARD.WIDTH;
-        }
-    }
 }
